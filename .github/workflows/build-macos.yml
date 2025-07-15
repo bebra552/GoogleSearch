@@ -172,13 +172,17 @@ jobs:
         playwright install chromium
         playwright install-deps
 
+    - name: Copy Playwright browsers to dist
+      run: |
+        if exist "%USERPROFILE%\AppData\Local\ms-playwright" (
+          xcopy /E /I /Y "%USERPROFILE%\AppData\Local\ms-playwright" "dist\ms-playwright"
+        )
+
     - name: Build application with PyInstaller
       run: |
         pyinstaller --onefile --windowed ^
           --name GoogleSearchParser ^
-          --distpath dist ^
-          --workpath build ^
-          --specpath . ^
+          --add-data "dist\ms-playwright;ms-playwright" ^
           --hidden-import playwright ^
           --hidden-import playwright.sync_api ^
           --hidden-import playwright._impl ^
