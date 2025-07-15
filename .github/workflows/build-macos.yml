@@ -172,6 +172,17 @@ jobs:
         playwright install chromium
         playwright install-deps
 
+    - name: Find chrome.exe for PyInstaller
+      id: find_chrome
+      run: |
+        for /d %%i in ("%USERPROFILE%\AppData\Local\ms-playwright\chromium-*") do (
+          if exist "%%i\chrome-win\chrome.exe" (
+            echo ::set-output name=chrome_path::%%i\chrome-win\chrome.exe
+            exit /b 0
+          )
+        )
+      shell: cmd
+
     - name: Copy Playwright browsers to dist
       run: |
         if exist "%USERPROFILE%\AppData\Local\ms-playwright" (
@@ -184,6 +195,7 @@ jobs:
         pyinstaller --onefile --windowed ^
           --name GoogleSearchParser ^
           --add-data "dist\ms-playwright;ms-playwright" ^
+          --add-binary "%USERPROFILE%\AppData\Local\ms-playwright\chromium-*\chrome-win\chrome.exe;ms-playwright\chromium\chrome-win" ^
           --hidden-import playwright ^
           --hidden-import playwright.sync_api ^
           --hidden-import playwright._impl ^
@@ -194,6 +206,7 @@ jobs:
           --hidden-import PyQt5.QtGui ^
           --hidden-import PyQt5.QtWidgets ^
           --collect-all playwright ^
+          --collect-all playwright._impl ^
           --exclude-module tkinter ^
           --exclude-module matplotlib ^
           --exclude-module numpy.tests ^
