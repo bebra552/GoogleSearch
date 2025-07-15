@@ -8,57 +8,55 @@ on:
 jobs:
   build-macos:
     runs-on: macos-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'  # Using 3.11 instead of 3.13 for better compatibility
-    
+
     - name: Install system dependencies
       run: |
-        # Install system dependencies that might be needed
         brew install pkg-config
-        
+
     - name: Upgrade pip and install build tools
       run: |
         python -m pip install --upgrade pip
         pip install --upgrade setuptools wheel
         pip install --upgrade build
-    
+
     - name: Install PyQt5 separately (with pre-built wheels)
       run: |
         pip install PyQt5==5.15.10
-    
+
     - name: Install other Python dependencies
       run: |
-        # Install dependencies one by one to identify any specific issues
         pip install playwright==1.40.0
         pip install beautifulsoup4==4.12.2
         pip install pandas==2.1.4
         pip install pyinstaller==6.3.0
-    
+
     - name: Verify installations
       run: |
         python -c "import PyQt5; print('PyQt5 version:', PyQt5.QtCore.QT_VERSION_STR)"
         python -c "import playwright; print('Playwright installed successfully')"
         python -c "import bs4; print('BeautifulSoup installed successfully')"
         python -c "import pandas; print('Pandas installed successfully')"
-    
+
     - name: Install Playwright browsers
       run: |
         playwright install chromium
         playwright install-deps
-    
+
     - name: Create app bundle structure
       run: |
         mkdir -p dist/GoogleSearchParser.app/Contents/MacOS
         mkdir -p dist/GoogleSearchParser.app/Contents/Resources
         mkdir -p dist/GoogleSearchParser.app/Contents/Frameworks
-    
+
     - name: Build application with PyInstaller
       run: |
         pyinstaller --onefile --windowed \
@@ -82,13 +80,13 @@ jobs:
           --exclude-module pandas.tests \
           --noconfirm \
           main.py
-    
+
     - name: Copy Playwright browsers to app bundle
       run: |
         if [ -d "$HOME/Library/Caches/ms-playwright" ]; then
           cp -r "$HOME/Library/Caches/ms-playwright" dist/GoogleSearchParser.app/Contents/Resources/
         fi
-    
+
     - name: Create Info.plist for proper macOS app
       run: |
         cat > dist/GoogleSearchParser.app/Contents/Info.plist << 'EOF'
@@ -117,18 +115,17 @@ jobs:
         </dict>
         </plist>
         EOF
-    
+
     - name: Make executable
       run: |
         chmod +x dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser
-    
+
     - name: Create DMG (optional)
       run: |
-        # Create a simple DMG for distribution
         mkdir -p dist/dmg
         cp -r dist/GoogleSearchParser.app dist/dmg/
         hdiutil create -volname "GoogleSearchParser" -srcfolder dist/dmg -ov -format UDZO dist/GoogleSearchParser.dmg
-    
+
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
       with:
@@ -137,7 +134,7 @@ jobs:
           dist/GoogleSearchParser.app
           dist/GoogleSearchParser.dmg
         retention-days: 30
-    
+
     - name: Upload build logs on failure
       if: failure()
       uses: actions/upload-artifact@v4
