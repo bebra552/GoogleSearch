@@ -1,0 +1,49 @@
+name: Build macOS Application
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Install Playwright browsers
+      run: |
+        playwright install chromium
+        playwright install-deps
+    
+    - name: Build application with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed \
+          --name GoogleSearchParser \
+          --add-data "$HOME/Library/Caches/ms-playwright:ms-playwright" \
+          --hidden-import playwright \
+          --hidden-import playwright.sync_api \
+          --hidden-import bs4 \
+          --hidden-import pandas \
+          --collect-all playwright \
+          --collect-all playwright._impl \
+          --osx-bundle-identifier com.googlesearch.parser \
+          main.py
+    
+    - name: Upload macOS build
+      uses: actions/upload-artifact@v4
+      with:
+        name: GoogleSearchParser-macOS
+        path: dist/GoogleSearchParser.app
