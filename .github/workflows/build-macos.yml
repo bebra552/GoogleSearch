@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'  # Using 3.11 instead of 3.13 for better compatibility
+        python-version: '3.11'
 
     - name: Install system dependencies
       run: |
@@ -41,7 +41,7 @@ jobs:
 
     - name: Verify installations
       run: |
-        python -c "import PyQt5; print('PyQt5 version:', PyQt5.QtCore.QT_VERSION_STR)"
+        python -c "from PyQt5 import QtCore; print('PyQt5 version:', QtCore.QT_VERSION_STR)"
         python -c "import playwright; print('Playwright installed successfully')"
         python -c "import bs4; print('BeautifulSoup installed successfully')"
         python -c "import pandas; print('Pandas installed successfully')"
