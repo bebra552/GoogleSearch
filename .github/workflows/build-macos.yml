@@ -177,6 +177,7 @@ jobs:
         if exist "%USERPROFILE%\AppData\Local\ms-playwright" (
           xcopy /E /I /Y "%USERPROFILE%\AppData\Local\ms-playwright" "dist\ms-playwright"
         )
+      shell: cmd
 
     - name: Build application with PyInstaller
       run: |
