@@ -28,16 +28,9 @@ jobs:
         pip install --upgrade setuptools wheel
         pip install --upgrade build
 
-    - name: Install PyQt5 separately (with pre-built wheels)
+    - name: Install Python dependencies from requirements.txt
       run: |
-        pip install PyQt5==5.15.10
-
-    - name: Install other Python dependencies
-      run: |
-        pip install playwright==1.40.0
-        pip install beautifulsoup4==4.12.2
-        pip install pandas==2.1.4
-        pip install pyinstaller==6.3.0
+        pip install -r requirements.txt
 
     - name: Verify installations
       run: |
@@ -79,7 +72,7 @@ jobs:
           --exclude-module numpy.tests \
           --exclude-module pandas.tests \
           --noconfirm \
-          main.py
+          src/main.py
 
     - name: Copy Playwright browsers to app bundle
       run: |
