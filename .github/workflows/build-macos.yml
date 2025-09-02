@@ -44,6 +44,12 @@ jobs:
         playwright install chromium
         playwright install-deps
 
+    - name: Create app bundle structure
+      run: |
+        mkdir -p dist/GoogleSearchParser.app/Contents/MacOS
+        mkdir -p dist/GoogleSearchParser.app/Contents/Resources
+        mkdir -p dist/GoogleSearchParser.app/Contents/Frameworks
+
     - name: Build application with PyInstaller
       run: |
         pyinstaller --onefile --windowed \
@@ -68,21 +74,15 @@ jobs:
           --noconfirm \
           src/main.py
 
-    - name: Create proper macOS app bundle structure
+    - name: Copy Playwright browsers to app bundle
       run: |
-        # Создаем структуру app bundle
-        mkdir -p "dist/GoogleSearchParser.app/Contents/MacOS"
-        mkdir -p "dist/GoogleSearchParser.app/Contents/Resources"
-        mkdir -p "dist/GoogleSearchParser.app/Contents/Frameworks"
-        
-        # Перемещаем исполняемый файл в правильное место
-        if [ -f "dist/GoogleSearchParser" ]; then
-          mv "dist/GoogleSearchParser" "dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser"
+        if [ -d "$HOME/Library/Caches/ms-playwright" ]; then
+          cp -r "$HOME/Library/Caches/ms-playwright" dist/GoogleSearchParser.app/Contents/Resources/
         fi
 
     - name: Create Info.plist for proper macOS app
       run: |
-        cat > "dist/GoogleSearchParser.app/Contents/Info.plist" << 'EOF'
+        cat > dist/GoogleSearchParser.app/Contents/Info.plist << 'EOF'
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
@@ -93,8 +93,6 @@ jobs:
           <string>com.googlesearch.parser</string>
           <key>CFBundleName</key>
           <string>GoogleSearchParser</string>
-          <key>CFBundleDisplayName</key>
-          <string>Google Search Parser</string>
           <key>CFBundleVersion</key>
           <string>1.0</string>
           <key>CFBundleShortVersionString</key>
@@ -107,96 +105,19 @@ jobs:
           <string>10.14</string>
           <key>NSHighResolutionCapable</key>
           <true/>
-          <key>NSAppTransportSecurity</key>
-          <dict>
-            <key>NSAllowsArbitraryLoads</key>
-            <true/>
-          </dict>
-          <key>LSUIElement</key>
-          <false/>
-          <key>NSRequiresAquaSystemAppearance</key>
-          <false/>
         </dict>
         </plist>
         EOF
 
-    - name: Create entitlements file
+    - name: Make executable
       run: |
-        cat > "dist/GoogleSearchParser.app/Contents/entitlements.plist" << 'EOF'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-          <key>com.apple.security.cs.allow-jit</key>
-          <true/>
-          <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-          <true/>
-          <key>com.apple.security.cs.disable-executable-page-protection</key>
-          <true/>
-          <key>com.apple.security.network.client</key>
-          <true/>
-          <key>com.apple.security.network.server</key>
-          <true/>
-          <key>com.apple.security.cs.allow-dyld-environment-variables</key>
-          <true/>
-        </dict>
-        </plist>
-        EOF
+        chmod +x dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser
 
-    - name: Set proper permissions and prepare for signing
+    - name: Create DMG (optional)
       run: |
-        # Устанавливаем правильные разрешения
-        chmod -R 755 "dist/GoogleSearchParser.app"
-        chmod +x "dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser"
-        
-        # Удаляем атрибуты карантина (если они есть)
-        xattr -cr "dist/GoogleSearchParser.app" || true
-        
-        # Проверяем, что исполняемый файл существует
-        ls -la "dist/GoogleSearchParser.app/Contents/MacOS/"
-
-    - name: Self-sign the application
-      run: |
-        # Подписываем приложение ad-hoc подписью
-        codesign --force --deep --sign - --entitlements "dist/GoogleSearchParser.app/Contents/entitlements.plist" "dist/GoogleSearchParser.app"
-        
-        # Проверяем подпись
-        codesign --verify --verbose "dist/GoogleSearchParser.app"
-        
-        # Проверяем с помощью spctl
-        spctl --assess --verbose "dist/GoogleSearchParser.app" || echo "Note: spctl assessment may fail for ad-hoc signed apps, but the app should still work"
-
-    - name: Test the application
-      run: |
-        # Пробуем запустить приложение для проверки
-        timeout 10s "dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser" --help || echo "App test completed (expected timeout)"
-
-    - name: Create DMG with installation instructions
-      run: |
-        # Создаем папку для DMG
         mkdir -p dist/dmg
-        cp -r "dist/GoogleSearchParser.app" dist/dmg/
-        
-        # Создаем файл с инструкциями
-        cat > "dist/dmg/README.txt" << 'EOF'
-        GoogleSearchParser Installation Instructions
-
-        1. Copy GoogleSearchParser.app to Applications folder
-        2. Open Terminal and run:
-           playwright install chromium
-        3. Launch the app from Applications
-
-        If you get security warnings on first launch:
-        System Preferences > Security & Privacy > Allow
-
-        Support: https://t.me/Userspoi
-        EOF
-        
-        # Создаем символическую ссылку на Applications
-        ln -s /Applications "dist/dmg/Applications"
-        
-        # Создаем DMG
-        hdiutil create -volname "GoogleSearchParser" -srcfolder "dist/dmg" -ov -format UDZO "dist/GoogleSearchParser.dmg"
+        cp -r dist/GoogleSearchParser.app dist/dmg/
+        hdiutil create -volname "GoogleSearchParser" -srcfolder dist/dmg -ov -format UDZO dist/GoogleSearchParser.dmg
 
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
@@ -251,6 +172,17 @@ jobs:
         playwright install chromium
         playwright install-deps
 
+    - name: Find chrome.exe for PyInstaller
+      id: find_chrome
+      run: |
+        for /d %%i in ("%USERPROFILE%\AppData\Local\ms-playwright\chromium-*") do (
+          if exist "%%i\chrome-win\chrome.exe" (
+            echo ::set-output name=chrome_path::%%i\chrome-win\chrome.exe
+            exit /b 0
+          )
+        )
+      shell: cmd
+
     - name: Copy Playwright browsers to dist
       run: |
         if exist "%USERPROFILE%\AppData\Local\ms-playwright" (
@@ -263,6 +195,7 @@ jobs:
         pyinstaller --onefile --windowed ^
           --name GoogleSearchParser ^
           --add-data "dist\ms-playwright;ms-playwright" ^
+          --add-binary "%USERPROFILE%\AppData\Local\ms-playwright\chromium-*\chrome-win\chrome.exe;ms-playwright\chromium\chrome-win" ^
           --hidden-import playwright ^
           --hidden-import playwright.sync_api ^
           --hidden-import playwright._impl ^
