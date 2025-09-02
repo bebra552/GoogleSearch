@@ -16,7 +16,7 @@ import random
 import re
 import traceback
 
-# Настройка пути к браузерам Playwright (ВЕРНУЛ ИСХОДНУЮ ЛОГИКУ)
+# Настройка пути к браузерам Playwright
 if platform.system() == "Darwin":  # macOS
     os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.expanduser("~/Library/Caches/ms-playwright")
 else:  # Windows
@@ -394,6 +394,7 @@ class GoogleSearchGUI(QMainWindow):
         info_group.setLayout(info_layout)
         main_layout.addWidget(info_group)
 
+
         # Кнопки управления
         buttons_layout = QHBoxLayout()
 
@@ -447,6 +448,7 @@ class GoogleSearchGUI(QMainWindow):
         feedback_layout.addStretch()
         feedback_layout.addWidget(self.feedback_button)
         main_layout.addLayout(feedback_layout)
+
 
         # Подключение сигналов
         self.limit_results_checkbox.toggled.connect(
@@ -528,6 +530,7 @@ class GoogleSearchGUI(QMainWindow):
                         if row.get('emails') and count < 3:
                             self.output_text.append(f"  {row['url']}: {row['emails'][:100]}...")
                             count += 1
+
 
             self.save_button.setEnabled(True)
         else:
