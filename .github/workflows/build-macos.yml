@@ -196,14 +196,7 @@ jobs:
         ln -s /Applications "dist/dmg/Applications"
         
         # Создаем DMG
-        hdiutil create -volname "GoogleSearchParser" -srcfolder "dist/dmg" -ov -format UDZO "dist/GoogleSearchParser.dmg"опросам: https://t.me/Userspoi
-        EOF
-        
-        # Создаем символическую ссылку на Applications
-        ln -s /Applications dist/dmg/Applications
-        
-        # Создаем DMG
-        hdiutil create -volname "GoogleSearchParser" -srcfolder dist/dmg -ov -format UDZO "dist/GoogleSearchParser.dmg"
+        hdiutil create -volname "GoogleSearchParser" -srcfolder "dist/dmg" -ov -format UDZO "dist/GoogleSearchParser.dmg"
 
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
