@@ -16,35 +16,11 @@ import random
 import re
 import traceback
 
-def setup_playwright_path():
-    """Настройка пути к браузерам Playwright для разных платформ"""
-    if platform.system() == "Darwin":  # macOS
-        # Всегда используем системный путь на macOS
-        system_path = os.path.expanduser("~/Library/Caches/ms-playwright")
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = system_path
-        print(f"Используем системные браузеры: {system_path}")
-        return system_path
-            
-    elif platform.system() == "Windows":  # Windows
-        if getattr(sys, 'frozen', False):
-            # Приложение запущено из PyInstaller bundle
-            bundle_dir = os.path.dirname(sys.executable)
-            browsers_path = os.path.join(bundle_dir, "ms-playwright")
-            
-            if os.path.exists(browsers_path):
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browsers_path
-                print(f"Используем встроенные браузеры: {browsers_path}")
-                return browsers_path
-        
-        # Системный путь для Windows
-        system_path = os.path.join(os.path.expanduser("~"), "AppData", "Local", "ms-playwright")
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = system_path
-        return system_path
-    
-    return None
-
-# Инициализируем пути при импорте модуля
-setup_playwright_path()
+# Настройка пути к браузерам Playwright (ВЕРНУЛ ИСХОДНУЮ ЛОГИКУ)
+if platform.system() == "Darwin":  # macOS
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.expanduser("~/Library/Caches/ms-playwright")
+else:  # Windows
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ms-playwright")
 
 
 class GoogleSearchWorker(QThread):
@@ -155,49 +131,24 @@ class GoogleSearchWorker(QThread):
                     return
 
                 self.emit_progress("Запуск браузера...")
-                
-                # Настраиваем аргументы браузера с учетом платформы
-                browser_args = [
-                    '--no-sandbox',
-                    '--disable-blink-features=AutomationControlled',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-first-run',
-                    '--no-default-browser-check',
-                    '--disable-extensions',
-                    '--disable-web-security',
-                    '--disable-features=VizDisplayCompositor'
-                ]
-                
-                # Дополнительные аргументы для macOS
-                if platform.system() == "Darwin":
-                    browser_args.extend([
-                        '--disable-background-timer-throttling',
-                        '--disable-renderer-backgrounding',
-                        '--disable-backgrounding-occluded-windows',
-                        '--disable-features=TranslateUI'
-                    ])
-
-                try:
-                    browser = p.chromium.launch(
-                        headless=True,
-                        args=browser_args
-                    )
-                except Exception as e:
-                    self.emit_progress(f"Ошибка запуска браузера: {e}")
-                    # Пробуем установить браузеры
-                    try:
-                        self.emit_progress("Попытка установки браузеров Playwright...")
-                        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], 
-                                     check=True, capture_output=True)
-                        browser = p.chromium.launch(headless=True, args=browser_args)
-                    except Exception as install_error:
-                        self.error_occurred.emit(f"Не удалось запустить браузер: {install_error}")
-                        return
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--no-sandbox',
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-dev-shm-usage',
+                        '--disable-gpu',
+                        '--no-first-run',
+                        '--no-default-browser-check',
+                        '--disable-extensions',
+                        '--disable-web-security',
+                        '--disable-features=VizDisplayCompositor'
+                    ]
+                )
 
                 context = browser.new_context(
                     locale='ru-RU',
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     viewport={'width': 1920, 'height': 1080},
                     extra_http_headers={
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -225,11 +176,6 @@ class GoogleSearchWorker(QThread):
                     window.chrome = {
                         runtime: {}
                     };
-                    
-                    // Дополнительное скрытие для macOS
-                    Object.defineProperty(navigator, 'platform', {
-                        get: () => 'MacIntel',
-                    });
                 """)
 
                 page = context.new_page()
@@ -533,11 +479,6 @@ class GoogleSearchGUI(QMainWindow):
             self.output_text.append(f"Результатов на странице: {results_per_page}")
         if collect_contacts:
             self.output_text.append("Сбор контактов: включен")
-        
-        # Показываем информацию о путях для отладки
-        browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "Не установлен")
-        self.output_text.append(f"Путь к браузерам: {browsers_path}")
-        self.output_text.append(f"Платформа: {platform.system()}")
         self.output_text.append("-" * 50)
 
         # Настройка UI для поиска
@@ -633,24 +574,10 @@ class GoogleSearchGUI(QMainWindow):
 
 
 def main():
-    # Настройка для macOS
-    if platform.system() == "Darwin":
-        os.environ["QT_MAC_WANTS_LAYER"] = "1"
-    
     app = QApplication(sys.argv)
 
     # Установка стиля приложения
     app.setStyle('Fusion')
-
-    # Проверяем доступность браузеров при запуске
-    browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-    if browsers_path and not os.path.exists(browsers_path):
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("Внимание")
-        msg.setText("Браузеры Playwright не найдены")
-        msg.setInformativeText(f"Путь: {browsers_path}\n\nПриложение может работать некорректно.")
-        msg.exec_()
 
     # Создание и показ главного окна
     window = GoogleSearchGUI()
