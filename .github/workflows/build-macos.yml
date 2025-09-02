@@ -65,7 +65,6 @@ jobs:
           --exclude-module matplotlib \
           --exclude-module numpy.tests \
           --exclude-module pandas.tests \
-          --add-data "$HOME/Library/Caches/ms-playwright:ms-playwright" \
           --noconfirm \
           src/main.py
 
@@ -81,9 +80,11 @@ jobs:
           mv "dist/GoogleSearchParser" "dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser"
         fi
         
-        # Копируем браузеры Playwright
+        # Копируем браузеры Playwright (только основные файлы, без исполняемых)
         if [ -d "$HOME/Library/Caches/ms-playwright" ]; then
-          cp -r "$HOME/Library/Caches/ms-playwright" "dist/GoogleSearchParser.app/Contents/Resources/"
+          mkdir -p "dist/GoogleSearchParser.app/Contents/Resources/ms-playwright"
+          # Копируем только необходимые файлы, исключая исполняемые файлы браузеров
+          find "$HOME/Library/Caches/ms-playwright" -type f \( -name "*.js" -o -name "*.json" -o -name "*.pak" -o -name "*.dat" \) -exec cp {} "dist/GoogleSearchParser.app/Contents/Resources/ms-playwright/" \; 2>/dev/null || true
         fi
 
     - name: Create Info.plist for proper macOS app
@@ -177,11 +178,27 @@ jobs:
         # Пробуем запустить приложение для проверки
         timeout 10s "dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser" --help || echo "App test completed (expected timeout)"
 
-    - name: Create DMG
+    - name: Create DMG with installation instructions
       run: |
         # Создаем папку для DMG
         mkdir -p dist/dmg
         cp -r "dist/GoogleSearchParser.app" dist/dmg/
+        
+        # Создаем файл с инструкциями
+        cat > dist/dmg/INSTALL_INSTRUCTIONS.txt << 'EOF'
+        ИНСТРУКЦИЯ ПО УСТАНОВКЕ GoogleSearchParser
+
+        1. Скопируйте приложение GoogleSearchParser.app в папку Applications
+        2. Откройте Terminal и выполните команды:
+           python3 -m pip install playwright
+           python3 -m playwright install chromium
+        3. Запустите приложение из Applications
+
+        После первого запуска может потребоваться разрешить запуск в 
+        System Preferences > Security & Privacy
+
+        По вопросам: https://t.me/Userspoi
+        EOF
         
         # Создаем символическую ссылку на Applications
         ln -s /Applications dist/dmg/Applications
