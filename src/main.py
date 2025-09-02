@@ -19,29 +19,11 @@ import traceback
 def setup_playwright_path():
     """Настройка пути к браузерам Playwright для разных платформ"""
     if platform.system() == "Darwin":  # macOS
-        # Проверяем, запущено ли приложение из bundle
-        if getattr(sys, 'frozen', False):
-            # Приложение запущено из PyInstaller bundle
-            bundle_dir = os.path.dirname(sys.executable)
-            app_dir = os.path.dirname(os.path.dirname(bundle_dir))  # Выходим из Contents/MacOS
-            browsers_path = os.path.join(app_dir, "Resources", "ms-playwright")
-            
-            if os.path.exists(browsers_path):
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browsers_path
-                print(f"Используем встроенные браузеры: {browsers_path}")
-                return browsers_path
-            else:
-                # Пробуем системный путь
-                system_path = os.path.expanduser("~/Library/Caches/ms-playwright")
-                if os.path.exists(system_path):
-                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = system_path
-                    print(f"Используем системные браузеры: {system_path}")
-                    return system_path
-        else:
-            # Разработка - используем системный путь
-            system_path = os.path.expanduser("~/Library/Caches/ms-playwright")
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = system_path
-            return system_path
+        # Всегда используем системный путь на macOS
+        system_path = os.path.expanduser("~/Library/Caches/ms-playwright")
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = system_path
+        print(f"Используем системные браузеры: {system_path}")
+        return system_path
             
     elif platform.system() == "Windows":  # Windows
         if getattr(sys, 'frozen', False):
