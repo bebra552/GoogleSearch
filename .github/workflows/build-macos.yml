@@ -178,7 +178,7 @@ jobs:
         cp -r "dist/GoogleSearchParser.app" dist/dmg/
         
         # Создаем файл с инструкциями
-        cat > dist/dmg/README.txt << 'EOF'
+        cat > "dist/dmg/README.txt" << 'EOF'
         GoogleSearchParser Installation Instructions
 
         1. Copy GoogleSearchParser.app to Applications folder
@@ -193,10 +193,10 @@ jobs:
         EOF
         
         # Создаем символическую ссылку на Applications
-        ln -s /Applications dist/dmg/Applications
+        ln -s /Applications "dist/dmg/Applications"
         
         # Создаем DMG
-        hdiutil create -volname "GoogleSearchParser" -srcfolder dist/dmg -ov -format UDZO "dist/GoogleSearchParser.dmg"опросам: https://t.me/Userspoi
+        hdiutil create -volname "GoogleSearchParser" -srcfolder "dist/dmg" -ov -format UDZO "dist/GoogleSearchParser.dmg"опросам: https://t.me/Userspoi
         EOF
         
         # Создаем символическую ссылку на Applications
