@@ -79,13 +79,6 @@ jobs:
         if [ -f "dist/GoogleSearchParser" ]; then
           mv "dist/GoogleSearchParser" "dist/GoogleSearchParser.app/Contents/MacOS/GoogleSearchParser"
         fi
-        
-        # Копируем браузеры Playwright (только основные файлы, без исполняемых)
-        if [ -d "$HOME/Library/Caches/ms-playwright" ]; then
-          mkdir -p "dist/GoogleSearchParser.app/Contents/Resources/ms-playwright"
-          # Копируем только необходимые файлы, исключая исполняемые файлы браузеров
-          find "$HOME/Library/Caches/ms-playwright" -type f \( -name "*.js" -o -name "*.json" -o -name "*.pak" -o -name "*.dat" \) -exec cp {} "dist/GoogleSearchParser.app/Contents/Resources/ms-playwright/" \; 2>/dev/null || true
-        fi
 
     - name: Create Info.plist for proper macOS app
       run: |
@@ -185,19 +178,25 @@ jobs:
         cp -r "dist/GoogleSearchParser.app" dist/dmg/
         
         # Создаем файл с инструкциями
-        cat > dist/dmg/INSTALL_INSTRUCTIONS.txt << 'EOF'
-        ИНСТРУКЦИЯ ПО УСТАНОВКЕ GoogleSearchParser
+        cat > dist/dmg/README.txt << 'EOF'
+        GoogleSearchParser Installation Instructions
 
-        1. Скопируйте приложение GoogleSearchParser.app в папку Applications
-        2. Откройте Terminal и выполните команды:
-           python3 -m pip install playwright
-           python3 -m playwright install chromium
-        3. Запустите приложение из Applications
+        1. Copy GoogleSearchParser.app to Applications folder
+        2. Open Terminal and run:
+           playwright install chromium
+        3. Launch the app from Applications
 
-        После первого запуска может потребоваться разрешить запуск в 
-        System Preferences > Security & Privacy
+        If you get security warnings on first launch:
+        System Preferences > Security & Privacy > Allow
 
-        По вопросам: https://t.me/Userspoi
+        Support: https://t.me/Userspoi
+        EOF
+        
+        # Создаем символическую ссылку на Applications
+        ln -s /Applications dist/dmg/Applications
+        
+        # Создаем DMG
+        hdiutil create -volname "GoogleSearchParser" -srcfolder dist/dmg -ov -format UDZO "dist/GoogleSearchParser.dmg"опросам: https://t.me/Userspoi
         EOF
         
         # Создаем символическую ссылку на Applications
